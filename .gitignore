@@ -1,0 +1,56 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/cache
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files (never commit real credentials)
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# ide / local agent
+.vscode
+.idea
+.gemini
+brain/
+screenshots/
+
+# internal planning & specification documents (kept local only)
+/PRD.md
+/ARCHITECTURE.md
+/DATABASE_DESIGN.md
+/TEST_PLAN.md
+/LOSTLINK_PROJECT_CONTEXT.md
+/DECISIONS_AND_OPEN_QUESTIONS.md
+/RESEARCH_AND_CONSTRAINTS.md
+/ANTIGRAVITY_BUILD_RULES.md
+/ANTIGRAVITY_PHASE1_START_PROMPT.md
+/README_FIRST.md
+/*.md
+!/README.md
