@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { getUserBookmarksAction } from '@/lib/server/bookmarks/actions';
 import { BookmarkButton } from '@/components/bookmark-button';
+import { formatDate } from '@/lib/utils';
 
 interface DashboardReportItem {
   id: string;
@@ -278,14 +279,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                       <span>•</span>
                       <span suppressHydrationWarning className="inline-flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5 text-stone-400" />
-                        {b.report?.occurred_at
-                          ? new Intl.DateTimeFormat('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                              timeZone: 'Asia/Kolkata',
-                            }).format(new Date(b.report.occurred_at))
-                          : 'Recent'}
+                        {b.report?.occurred_at ? formatDate(b.report.occurred_at) : 'Recent'}
                       </span>
                     </div>
                   </div>
@@ -365,12 +359,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     <span>•</span>
                     <span suppressHydrationWarning className="inline-flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5 text-stone-400" />
-                      {new Intl.DateTimeFormat('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        timeZone: 'Asia/Kolkata',
-                      }).format(new Date(report.occurredAt))}
+                      {report.occurredAt ? formatDate(report.occurredAt) : 'Recent'}
                     </span>
                     <span>•</span>
                     <span>{report.category}</span>

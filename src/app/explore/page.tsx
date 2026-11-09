@@ -8,7 +8,6 @@ import {
   Compass,
   PlusCircle,
   RotateCcw,
-  Sparkles,
   PackageSearch,
 } from "lucide-react";
 import { ReportItem } from "@/lib/mock-data";
@@ -275,15 +274,11 @@ export default function ExplorePage() {
         )}
       </div>
 
-      {/* Results Count & Policy Reminder Strip */}
-      <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-stone-500">
+      {/* Results Count */}
+      <div className="mt-4 text-xs text-stone-500">
         <p>
           Listing <strong>{filteredReports.length}</strong> verified reports across campus.
         </p>
-        <div className="flex items-center gap-1.5 text-[11px] text-emerald-950 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
-          <Sparkles className="h-3.5 w-3.5 shrink-0 text-emerald-700" />
-          <span>Instant keyword search across all reports. Smart description matching runs whenever a new report is posted.</span>
-        </div>
       </div>
 
       {/* Grid of Reports / Loading / Empty States */}

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { processReportImage } from '@/lib/server/storage/process-image';
 import { deleteReportImages } from '@/lib/server/storage/delete-report-images';
 import { getSignedImageUrl } from '@/lib/server/storage/signed-urls';
@@ -470,7 +471,13 @@ export async function markAllNotificationsReadAction() {
  */
 export async function getExploreReportsAction(): Promise<{ reports: ReportItem[]; isSamplePreview: boolean }> {
   try {
-    const supabase = await createClient();
+    let supabase;
+    try {
+      supabase = createAdminClient();
+    } catch {
+      supabase = await createClient();
+    }
+
     const { data, error } = await supabase
       .from('reports')
       .select(`
@@ -490,6 +497,7 @@ export async function getExploreReportsAction(): Promise<{ reports: ReportItem[]
         report_images (object_path)
       `)
       .eq('moderation_state', 'visible')
+      .in('status', ['active', 'claim_accepted', 'resolved'])
       .order('occurred_at', { ascending: false });
 
     if (error || !data || data.length === 0) {

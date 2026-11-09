@@ -40,8 +40,7 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isProtectedRoute =
-    pathname.startsWith('/explore') ||
-    pathname.startsWith('/report') ||
+    pathname.startsWith('/report/new') ||
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/notifications') ||
     pathname.startsWith('/claims') ||

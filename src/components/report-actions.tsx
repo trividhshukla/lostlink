@@ -22,12 +22,16 @@ interface ReportActionsProps {
   };
 }
 
-function safeFormatDateTimeLocal(dateString?: string | null): string {
+function safeFormatDateOnly(dateString?: string | null): string {
   if (!dateString) return '';
+  if (typeof dateString === 'string') {
+    const match = dateString.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return match[0];
+  }
   const d = new Date(dateString);
   if (Number.isNaN(d.getTime())) return '';
   try {
-    return d.toISOString().slice(0, 16);
+    return d.toISOString().slice(0, 10);
   } catch {
     return '';
   }
@@ -51,7 +55,7 @@ export function ReportActions({ report }: ReportActionsProps) {
   const [campusAreaId, setCampusAreaId] = useState(report.campus_area_id);
   const [locationNote, setLocationNote] = useState(report.location_note || '');
   const [occurredAt, setOccurredAt] = useState(
-    safeFormatDateTimeLocal(report.occurred_at)
+    safeFormatDateOnly(report.occurred_at)
   );
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -296,9 +300,9 @@ export function ReportActions({ report }: ReportActionsProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-stone-700 mb-1">Incident Date & Time</label>
+            <label className="block text-xs font-semibold text-stone-700 mb-1">Incident Date</label>
             <input
-              type="datetime-local"
+              type="date"
               required
               value={occurredAt}
               onChange={(e) => setOccurredAt(e.target.value)}

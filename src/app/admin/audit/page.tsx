@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { getAdminAuditLogsAction } from '@/lib/server/admin/actions';
 import { ArrowLeft } from 'lucide-react';
+import { formatDateTime } from '@/lib/utils';
 
 export const metadata = {
   title: 'Admin Audit Log | LostLink Admin',
@@ -69,8 +70,8 @@ export default async function AdminAuditPage() {
                 ) : (
                   logs.map((log) => (
                     <tr key={log.id} className="hover:bg-stone-800/40 transition-colors">
-                      <td className="px-5 py-3.5 whitespace-nowrap text-stone-400 font-mono">
-                        {new Date(log.created_at).toLocaleString()}
+                      <td suppressHydrationWarning className="px-5 py-3.5 whitespace-nowrap text-stone-400 font-mono">
+                        {formatDateTime(log.created_at)}
                       </td>
                       <td className="px-5 py-3.5 font-medium text-stone-200">
                         {log.admin_name}

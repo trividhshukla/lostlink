@@ -86,17 +86,14 @@ export function InteractiveMatchDemo() {
 
   return (
     <div className="relative mx-auto w-full max-w-md rounded-2xl bg-[#0C1512] text-stone-100 p-5 sm:p-6 shadow-2xl border border-stone-800/90 transition-all">
-      {/* Header with Live Match badge */}
-      <div className="flex items-center justify-between pb-4 border-b border-stone-800">
+      {/* Header */}
+      <div className="flex items-center pb-4 border-b border-stone-800">
         <div className="flex items-center gap-2">
           <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-xs font-bold uppercase tracking-wider text-stone-200">
-            Interactive Match Demo
+            Match Demo
           </span>
         </div>
-        <span className="text-[11px] font-medium text-emerald-400/90 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-          Grounded Matching
-        </span>
       </div>
 
       {/* 3 Clickable Demo Tabs */}

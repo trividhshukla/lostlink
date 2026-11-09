@@ -13,6 +13,8 @@ import {
   ShieldAlert,
   Lock,
 } from 'lucide-react';
+import { formatDateTime } from '@/lib/utils';
+import { AdminDeleteReportButton } from '@/components/admin-delete-report-button';
 
 interface AuditedInspectionData {
   claim_id?: string;
@@ -187,8 +189,8 @@ export function AdminFlagsView({ initialFlags }: AdminFlagsViewProps) {
 
                 {/* Action Toolbar */}
                 <div className="pt-3 border-t border-stone-800/80 flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-[11px] text-stone-400">
-                    Flagged on {new Date(flag.created_at).toLocaleString()}
+                  <div suppressHydrationWarning className="text-[11px] text-stone-400">
+                    Flagged on {formatDateTime(flag.created_at)}
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -207,14 +209,22 @@ export function AdminFlagsView({ initialFlags }: AdminFlagsViewProps) {
 
                     {/* Report Moderation Action */}
                     {flag.target_type === 'report' && (isOpen || isReviewing) && (
-                      <button
-                        type="button"
-                        onClick={() => handleModerateReport(flag.id, flag.target_id, 'hide')}
-                        disabled={isPending}
-                        className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-semibold transition-all"
-                      >
-                        Hide Report
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleModerateReport(flag.id, flag.target_id, 'hide')}
+                          disabled={isPending}
+                          className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-semibold transition-all"
+                        >
+                          Hide Report
+                        </button>
+                        <AdminDeleteReportButton
+                          reportId={flag.target_id}
+                          reportTitle="Flagged Report"
+                          redirectTo="/admin/moderation"
+                          onDeleted={() => router.refresh()}
+                        />
+                      </>
                     )}
 
                     {/* Resolve / Dismiss Controls */}
@@ -294,8 +304,8 @@ export function AdminFlagsView({ initialFlags }: AdminFlagsViewProps) {
                 <div className="max-h-64 overflow-y-auto space-y-2 p-3 bg-stone-950 border border-stone-800 rounded-xl">
                   {auditedData.messages?.map((m) => (
                     <div key={m.id} className="text-xs p-2 bg-stone-900 rounded-lg">
-                      <span className="text-[10px] text-stone-500 font-mono block">
-                        Sender: {m.sender_id} &bull; {new Date(m.created_at).toLocaleTimeString()}
+                      <span suppressHydrationWarning className="text-[10px] text-stone-500 font-mono block">
+                        Sender: {m.sender_id} &bull; {formatDateTime(m.created_at)}
                       </span>
                       <p className="text-stone-200 mt-0.5">{m.body}</p>
                     </div>

@@ -37,6 +37,7 @@ interface PotentialMatchesProps {
   matchingStatus: string;
   canRetry: boolean;
   matches: DisplayMatch[];
+  isAuthenticated?: boolean;
 }
 
 export function PotentialMatches({
@@ -45,6 +46,7 @@ export function PotentialMatches({
   matchingStatus,
   canRetry,
   matches,
+  isAuthenticated = true,
 }: PotentialMatchesProps) {
   const [retrying, setRetrying] = useState(false);
   const [retryResult, setRetryResult] = useState<string | null>(null);
@@ -222,7 +224,7 @@ export function PotentialMatches({
               {/* View/Claim Action */}
               <div className="shrink-0 flex items-center gap-2">
                 <Link
-                  href={`/report/${match.matchedReportId}`}
+                  href={isAuthenticated ? `/report/${match.matchedReportId}` : `/login?redirect=/report/${match.matchedReportId}`}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-[#0C1512] text-stone-100 hover:bg-[#182420] transition shadow-xs"
                 >
                   <span>Inspect Match</span>

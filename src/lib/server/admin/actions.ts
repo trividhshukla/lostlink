@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { FlagReason, FlagStatus, FlagTargetType } from '@/types/database';
 
 export interface AdminFlagItem {
@@ -299,5 +300,148 @@ export async function getAdminAuditLogsAction(
     };
   } catch (err) {
     return { logs: [], error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}
+
+// 8. Super-Admin Permanent Hard-Delete (Cascade Purge Across Entire System)
+export async function permanentlyDeleteReportAdminAction(
+  reportId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: 'Unauthorized: Sign in required.' };
+    }
+
+    const adminSupabase = createAdminClient();
+
+    // Verify admin role via RPC or user_roles table
+    let isAdmin = false;
+    const { data: rpcAdmin } = await supabase.rpc('is_admin', { p_user_id: user.id });
+    if (rpcAdmin === true) {
+      isAdmin = true;
+    } else {
+      const { data: roleRow } = await adminSupabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+      if (roleRow) isAdmin = true;
+    }
+
+    if (!isAdmin) {
+      return { success: false, error: 'Unauthorized: Admin privileges required.' };
+    }
+
+    // 1. Fetch photo paths from report_images and delete from Storage
+    const pathsToDelete: string[] = [];
+    const { data: images } = await adminSupabase
+      .from('report_images')
+      .select('object_path')
+      .eq('report_id', reportId);
+
+    if (images && images.length > 0) {
+      for (const img of images) {
+        if (img.object_path) pathsToDelete.push(img.object_path);
+      }
+    }
+
+    if (pathsToDelete.length > 0) {
+      try {
+        await adminSupabase.storage.from('report-photos').remove(pathsToDelete);
+      } catch (storageErr) {
+        console.warn('Storage purge error (continuing database cascade):', storageErr);
+      }
+    }
+
+    // 2. Find all linked claims (found_report_id or lost_report_id)
+    const { data: linkedClaims } = await adminSupabase
+      .from('claims')
+      .select('id')
+      .or(`found_report_id.eq.${reportId},lost_report_id.eq.${reportId}`);
+
+    if (linkedClaims && linkedClaims.length > 0) {
+      const claimIds = linkedClaims.map((c) => c.id);
+
+      // 3. Find and delete conversations & messages
+      const { data: convs } = await adminSupabase
+        .from('conversations')
+        .select('id')
+        .in('claim_id', claimIds);
+
+      if (convs && convs.length > 0) {
+        const convIds = convs.map((cv) => cv.id);
+        await adminSupabase.from('messages').delete().in('conversation_id', convIds);
+        await adminSupabase.from('conversations').delete().in('id', convIds);
+      }
+
+      // 4. Delete claim details, notifications, flags on claims, and claims
+      await adminSupabase.from('claim_details').delete().in('claim_id', claimIds);
+      await adminSupabase.from('notifications').delete().in('claim_id', claimIds);
+      await adminSupabase.from('flags').delete().eq('target_type', 'claim').in('target_id', claimIds);
+      await adminSupabase.from('claims').delete().in('id', claimIds);
+    }
+
+    // 5. Delete direct notifications referencing report_id
+    await adminSupabase.from('notifications').delete().eq('report_id', reportId);
+
+    // 6. Delete matches (lost_report_id or found_report_id)
+    await adminSupabase
+      .from('matches')
+      .delete()
+      .or(`lost_report_id.eq.${reportId},found_report_id.eq.${reportId}`);
+
+    // 7. Delete bookmarks, flags, timeline events, and report_images
+    await adminSupabase.from('bookmarks').delete().eq('report_id', reportId);
+    await adminSupabase.from('flags').delete().eq('target_type', 'report').eq('target_id', reportId);
+    await adminSupabase.from('report_events').delete().eq('report_id', reportId);
+    await adminSupabase.from('report_images').delete().eq('report_id', reportId);
+
+    // 8. Delete the report itself
+    const { error: repDeleteError } = await adminSupabase
+      .from('reports')
+      .delete()
+      .eq('id', reportId);
+
+    if (repDeleteError) {
+      throw repDeleteError;
+    }
+
+    // 9. Log admin action
+    try {
+      await adminSupabase.from('admin_actions').insert({
+        admin_id: user.id,
+        target_type: 'report',
+        target_id: reportId,
+        action: 'permanent_hard_delete',
+        metadata: {
+          timestamp: new Date().toISOString(),
+          purged_paths_count: pathsToDelete.length,
+        },
+      });
+    } catch {
+      // Audit log fail shouldn't crash the completed purge
+    }
+
+    // 10. Revalidate all cached views
+    revalidatePath('/');
+    revalidatePath('/explore');
+    revalidatePath('/dashboard');
+    revalidatePath('/claims');
+    revalidatePath('/notifications');
+    revalidatePath('/admin/moderation');
+    revalidatePath('/admin/audit');
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to permanently delete report.',
+    };
   }
 }

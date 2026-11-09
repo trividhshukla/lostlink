@@ -14,6 +14,7 @@ import {
   ArrowRight,
   CheckCheck,
 } from 'lucide-react';
+import { formatDateTime } from '@/lib/utils';
 
 export interface NotificationItem {
   id: string;
@@ -148,13 +149,9 @@ export function NotificationsView({ notifications }: NotificationsViewProps) {
                   </p>
 
                   <div className="flex items-center gap-3 mt-2 text-[11px] text-stone-400">
-                    <span className="flex items-center gap-1">
+                    <span suppressHydrationWarning className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {new Date(item.createdAt).toLocaleDateString()} at{' '}
-                      {new Date(item.createdAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatDateTime(item.createdAt)}
                     </span>
                     {item.reportId && (
                       <span className="text-emerald-800 font-semibold flex items-center gap-0.5">

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { getSignedImageUrl, getAuthorizedReportImageUrl } from '@/lib/server/storage/signed-urls';
 import { PhotoVisibility } from '@/types/database';
 import {
@@ -15,8 +16,10 @@ import { ReportTimeline, TimelineEventItem } from '@/components/report-timeline'
 import { ClaimsList } from '@/components/claims-list';
 import { ClaimActionArea } from '@/components/claim-action-area';
 import { ReportDetailToolbar } from '@/components/report-detail-toolbar';
+import { AdminDeleteReportButton } from '@/components/admin-delete-report-button';
 import { isReportBookmarkedAction } from '@/lib/server/bookmarks/actions';
 import { Badge } from '@/components/badge';
+import { formatDate } from '@/lib/utils';
 import {
   ArrowLeft,
   Calendar,
@@ -25,36 +28,8 @@ import {
   ShieldAlert,
   User,
   Clock,
+  CheckCircle2,
 } from 'lucide-react';
-
-function safeFormatDate(dateStr?: string | null): string {
-  if (!dateStr) return 'Recently';
-  const d = new Date(dateStr);
-  return Number.isNaN(d.getTime())
-    ? dateStr
-    : new Intl.DateTimeFormat('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        timeZone: 'Asia/Kolkata',
-      }).format(d);
-}
-
-function safeFormatDateTime(dateStr?: string | null): string {
-  if (!dateStr) return 'Recently';
-  const d = new Date(dateStr);
-  return Number.isNaN(d.getTime())
-    ? dateStr
-    : new Intl.DateTimeFormat('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: 'Asia/Kolkata',
-      }).format(d);
-}
 
 interface ReportWithRelations {
   id: string;
@@ -85,6 +60,7 @@ interface OppositeReportView {
   id: string;
   title: string;
   report_type: 'lost' | 'found';
+  status: string;
   campus_areas?: { label: string } | null;
   categories?: { label: string; photo_visibility: string } | null;
   report_images?: { object_path: string } | Array<{ object_path: string }> | null;
@@ -102,15 +78,60 @@ export default async function ReportDetailPage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 1. Fetch main report from Supabase
+  let adminSupabase;
+  try {
+    adminSupabase = createAdminClient();
+  } catch {
+    adminSupabase = supabase;
+  }
+
+  // Check admin role
+  let isAdmin = false;
+  if (user) {
+    try {
+      const { data: rpcAdmin } = await supabase.rpc('is_admin', { p_user_id: user.id });
+      if (rpcAdmin === true) {
+        isAdmin = true;
+      } else {
+        const { data: roleRow } = await adminSupabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+        if (roleRow) isAdmin = true;
+      }
+    } catch {
+      isAdmin = false;
+    }
+  }
+
+  // 1. Fetch main report from Supabase using admin client (sanitized public fields)
   let reportData: ReportWithRelations | null = null;
   let imageUrl: string | null = null;
   let isRestrictedDoc = false;
 
-  const { data: dbReport } = (await supabase
+  const { data: dbReport } = (await adminSupabase
     .from('reports')
     .select(`
-      *,
+      id,
+      owner_id,
+      campus_id,
+      report_type,
+      status,
+      moderation_state,
+      title,
+      description,
+      category_id,
+      primary_color,
+      brand,
+      distinctive_features,
+      campus_area_id,
+      location_note,
+      occurred_at,
+      matching_status,
+      matching_started_at,
+      created_at,
       categories (id, label, photo_visibility),
       campus_areas (id, label),
       profiles!owner_id (id, display_name),
@@ -120,6 +141,14 @@ export default async function ReportDetailPage({ params }: PageProps) {
     .single()) as unknown as { data: ReportWithRelations | null };
 
   if (dbReport) {
+    // If report is not visible (hidden/flagged), only owner or admin can view
+    if (dbReport.moderation_state !== 'visible') {
+      const isOwnerOrAdmin = user && (user.id === dbReport.owner_id || isAdmin);
+      if (!isOwnerOrAdmin) {
+        notFound();
+      }
+    }
+
     reportData = dbReport;
     isRestrictedDoc = dbReport.categories?.photo_visibility === 'restricted';
 
@@ -165,70 +194,79 @@ export default async function ReportDetailPage({ params }: PageProps) {
     }
   }
 
-  // 2. Fetch matches for this report
+  const isReportActiveOrHandover =
+    reportData.status === 'active' || reportData.status === 'claim_accepted';
+
+  // 2. Fetch matches for this report (ONLY when active or in handover, never when resolved)
   const formattedMatches: DisplayMatch[] = [];
 
-  const { data: dbMatches } = await supabase
-    .from('matches')
-    .select(`
-      id,
-      lost_report_id,
-      found_report_id,
-      label,
-      reasons,
-      created_at
-    `)
-    .or(`lost_report_id.eq.${id},found_report_id.eq.${id}`)
-    .order('created_at', { ascending: false });
+  if (isReportActiveOrHandover) {
+    const { data: dbMatches } = await adminSupabase
+      .from('matches')
+      .select(`
+        id,
+        lost_report_id,
+        found_report_id,
+        label,
+        reasons,
+        created_at
+      `)
+      .or(`lost_report_id.eq.${id},found_report_id.eq.${id}`)
+      .order('created_at', { ascending: false });
 
-  if (dbMatches && dbMatches.length > 0) {
-    for (const m of dbMatches) {
-      const oppositeReportId = m.lost_report_id === id ? m.found_report_id : m.lost_report_id;
-      const { data: oppositeReport } = (await supabase
-        .from('reports')
-        .select(`
-          id,
-          title,
-          report_type,
-          campus_areas (label),
-          categories (label, photo_visibility),
-          report_images (object_path)
-        `)
-        .eq('id', oppositeReportId)
-        .single()) as unknown as { data: OppositeReportView | null };
+    if (dbMatches && dbMatches.length > 0) {
+      for (const m of dbMatches) {
+        const oppositeReportId = m.lost_report_id === id ? m.found_report_id : m.lost_report_id;
+        const { data: oppositeReport } = (await adminSupabase
+          .from('reports')
+          .select(`
+            id,
+            title,
+            report_type,
+            status,
+            campus_areas (label),
+            categories (label, photo_visibility),
+            report_images (object_path)
+          `)
+          .eq('id', oppositeReportId)
+          .eq('moderation_state', 'visible')
+          .neq('status', 'resolved')
+          .single()) as unknown as { data: OppositeReportView | null };
 
-      if (oppositeReport) {
-        const isOppositeRestricted = oppositeReport.categories?.photo_visibility === 'restricted';
-        let matchPhotoUrl: string | null = null;
+        // Exclude opposite candidate reports whose own status is 'resolved'
+        if (oppositeReport && oppositeReport.status !== 'resolved') {
+          const isOppositeRestricted = oppositeReport.categories?.photo_visibility === 'restricted';
+          let matchPhotoUrl: string | null = null;
 
-        const oppImagePath = Array.isArray(oppositeReport.report_images)
-          ? oppositeReport.report_images[0]?.object_path
-          : oppositeReport.report_images?.object_path;
+          const oppImagePath = Array.isArray(oppositeReport.report_images)
+            ? oppositeReport.report_images[0]?.object_path
+            : oppositeReport.report_images?.object_path;
 
-        if (oppImagePath && !isOppositeRestricted) {
-          matchPhotoUrl = await getSignedImageUrl(oppImagePath);
+          if (oppImagePath && !isOppositeRestricted) {
+            matchPhotoUrl = await getSignedImageUrl(oppImagePath);
+          }
+
+          formattedMatches.push({
+            id: m.id,
+            matchedReportId: oppositeReport.id,
+            matchedReportTitle: oppositeReport.title,
+            matchedReportType: oppositeReport.report_type,
+            matchedCampusArea: oppositeReport.campus_areas?.label || 'Campus',
+            matchedCategory: oppositeReport.categories?.label || 'General',
+            matchedPhotoUrl: matchPhotoUrl,
+            matchedIsRestricted: isOppositeRestricted,
+            label: m.label,
+            reasons: (m.reasons as unknown as Array<{ code: string; text: string }>) || [],
+            createdAt: m.created_at,
+          });
         }
-
-        formattedMatches.push({
-          id: m.id,
-          matchedReportId: oppositeReport.id,
-          matchedReportTitle: oppositeReport.title,
-          matchedReportType: oppositeReport.report_type,
-          matchedCampusArea: oppositeReport.campus_areas?.label || 'Campus',
-          matchedCategory: oppositeReport.categories?.label || 'General',
-          matchedPhotoUrl: matchPhotoUrl,
-          matchedIsRestricted: isOppositeRestricted,
-          label: m.label,
-          reasons: (m.reasons as unknown as Array<{ code: string; text: string }>) || [],
-          createdAt: m.created_at,
-        });
       }
     }
   }
 
   // 3. Fetch report timeline events
   let timelineEvents: TimelineEventItem[] = [];
-  const { data: dbEvents } = await supabase
+  const { data: dbEvents } = await adminSupabase
     .from('report_events')
     .select('id, event_type, safe_public_metadata, created_at')
     .eq('report_id', id)
@@ -248,7 +286,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
         id: 'initial',
         eventType: 'created',
         metadata: { report_type: reportData.report_type },
-        createdAt: reportData.occurred_at || new Date().toISOString(),
+        createdAt: reportData.created_at || reportData.occurred_at || new Date().toISOString(),
       },
     ];
   }
@@ -291,14 +329,22 @@ export default async function ReportDetailPage({ params }: PageProps) {
             </div>
 
             <div className="flex items-center gap-3">
+              {isAdmin && (
+                <AdminDeleteReportButton
+                  reportId={reportData.id}
+                  reportTitle={reportData.title}
+                  redirectTo="/explore"
+                />
+              )}
               <div className="text-xs text-stone-500 hidden sm:flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-stone-400" />
-                <span suppressHydrationWarning>Reported on {safeFormatDate(reportData.occurred_at)}</span>
+                <span suppressHydrationWarning>Reported on {formatDate(reportData.created_at || reportData.occurred_at)}</span>
               </div>
               <ReportDetailToolbar
                 reportId={reportData.id}
                 reportTitle={reportData.title}
                 initialBookmarked={isBookmarked}
+                isAuthenticated={Boolean(user)}
               />
             </div>
           </div>
@@ -417,7 +463,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
                   <span className="text-stone-400 block text-[11px]">Incident Date</span>
                   <span className="font-semibold text-stone-800 flex items-center gap-1 mt-0.5">
                     <Calendar className="w-3.5 h-3.5 text-stone-500" />
-                    {safeFormatDateTime(reportData.occurred_at)}
+                    {formatDate(reportData.occurred_at)}
                   </span>
                 </div>
               </div>
@@ -425,15 +471,18 @@ export default async function ReportDetailPage({ params }: PageProps) {
           </div>
 
           {/* Potential Matches Panel */}
-          <div className="pt-6 border-t border-stone-100">
-            <PotentialMatches
-              reportId={reportData.id}
-              isOwner={isOwner}
-              matchingStatus={reportData.report_type}
-              canRetry={canRetry}
-              matches={formattedMatches}
-            />
-          </div>
+          {isReportActiveOrHandover && (
+            <div className="pt-6 border-t border-stone-100">
+              <PotentialMatches
+                reportId={reportData.id}
+                isOwner={isOwner}
+                matchingStatus={reportData.report_type}
+                canRetry={canRetry}
+                matches={formattedMatches}
+                isAuthenticated={Boolean(user)}
+              />
+            </div>
+          )}
 
           {/* Owner Management or Member Claim Action Section */}
           <div className="pt-6 border-t border-stone-100">
@@ -465,7 +514,23 @@ export default async function ReportDetailPage({ params }: PageProps) {
                 userActiveLostReports={userActiveLostReports}
                 userHasExistingClaim={userHasExistingClaim}
                 existingClaimStatus={existingClaimStatus}
+                isAuthenticated={Boolean(user)}
+                isReportResolved={reportData.status === 'resolved'}
               />
+            ) : reportData.status === 'resolved' ? (
+              <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center gap-3 shadow-xs">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 shrink-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-800" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-emerald-900 block">
+                    Item Recovered &amp; Resolved
+                  </span>
+                  <p className="text-xs text-stone-700 mt-0.5">
+                    This lost item report has been resolved and successfully returned to its rightful owner.
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
@@ -478,7 +543,7 @@ export default async function ReportDetailPage({ params }: PageProps) {
                 </div>
 
                 <Link
-                  href="/report/new?type=found"
+                  href={user ? "/report/new?type=found" : "/login?redirect=/report/new?type=found"}
                   className="px-4 py-2 rounded-xl text-xs font-semibold bg-[#0C1512] text-stone-100 hover:bg-[#182420] transition shadow shrink-0"
                 >
                   I Found this Item

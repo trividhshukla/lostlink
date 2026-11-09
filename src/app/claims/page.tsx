@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getUserClaimsAction } from '@/lib/server/claims/actions';
+import { formatDateTime } from '@/lib/utils';
 
 export const metadata = {
   title: 'Claims & Handovers | LostLink',
@@ -111,12 +112,7 @@ export default async function ClaimsPage() {
 
                     <div className="pt-2 border-t border-stone-800/80 flex items-center justify-between">
                       <span suppressHydrationWarning className="text-[10px] text-stone-400">
-                        {new Intl.DateTimeFormat('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          timeZone: 'Asia/Kolkata',
-                        }).format(new Date(c.created_at))}
+                        {formatDateTime(c.created_at)}
                       </span>
                       {isAccepted ? (
                         <Link
@@ -214,12 +210,7 @@ export default async function ClaimsPage() {
 
                     <div className="pt-2 border-t border-stone-800/80 flex items-center justify-between">
                       <span suppressHydrationWarning className="text-[10px] text-stone-400">
-                        {new Intl.DateTimeFormat('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          timeZone: 'Asia/Kolkata',
-                        }).format(new Date(c.created_at))}
+                        {formatDateTime(c.created_at)}
                       </span>
                       {isAccepted ? (
                         <Link

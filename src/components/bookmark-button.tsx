@@ -8,12 +8,14 @@ interface BookmarkButtonProps {
   reportId: string;
   initialBookmarked?: boolean;
   className?: string;
+  isAuthenticated?: boolean;
 }
 
 export function BookmarkButton({
   reportId,
   initialBookmarked = false,
   className = '',
+  isAuthenticated,
 }: BookmarkButtonProps) {
   const [isBookmarked, setIsBookmarked] = useState(initialBookmarked);
   const [isPending, startTransition] = useTransition();
@@ -22,12 +24,20 @@ export function BookmarkButton({
     e.preventDefault();
     e.stopPropagation();
 
+    if (isAuthenticated === false) {
+      window.location.href = `/login?next=/report/${reportId}`;
+      return;
+    }
+
     setIsBookmarked(!isBookmarked);
     startTransition(async () => {
       const res = await toggleBookmarkAction(reportId);
       if (res.error) {
-        // revert on error
+        // revert on error and redirect to login if unauthenticated
         setIsBookmarked(isBookmarked);
+        if (res.error.toLowerCase().includes('signed in')) {
+          window.location.href = `/login?next=/report/${reportId}`;
+        }
       } else {
         setIsBookmarked(res.isBookmarked);
       }

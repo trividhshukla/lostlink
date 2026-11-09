@@ -15,6 +15,8 @@ interface ClaimActionAreaProps {
   userActiveLostReports: ActiveLostReport[];
   userHasExistingClaim: boolean;
   existingClaimStatus?: string | null;
+  isAuthenticated?: boolean;
+  isReportResolved?: boolean;
 }
 
 export function ClaimActionArea({
@@ -23,18 +25,50 @@ export function ClaimActionArea({
   userActiveLostReports,
   userHasExistingClaim,
   existingClaimStatus,
+  isAuthenticated,
+  isReportResolved = false,
 }: ClaimActionAreaProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const handleClaimClick = () => {
+    if (isAuthenticated === false) {
+      window.location.href = `/login?redirect=/report/${foundReportId}`;
+      return;
+    }
+    setIsModalOpen(true);
+  };
+
+  // If user has an existing claim (regardless of whether report is active or resolved)
   if (userHasExistingClaim) {
     return (
-      <div className="p-4 bg-emerald-950/20 border border-emerald-800/60 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+      <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
         <div>
-          <span className="text-xs font-semibold text-emerald-400">
+          <span className="text-xs font-bold uppercase tracking-wider text-emerald-900 block">
             Claim Status: {existingClaimStatus ? existingClaimStatus.toUpperCase() : 'SUBMITTED'}
           </span>
-          <p className="text-xs text-stone-300 mt-0.5">
+          <p className="text-xs text-emerald-950 font-medium mt-0.5">
             You have already filed an ownership claim for this found item.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // If report is resolved and visitor is guest or not the claimant: read-only banner
+  if (isReportResolved) {
+    return (
+      <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center gap-3 shadow-xs">
+        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 shrink-0">
+          <svg className="w-4 h-4 text-emerald-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <span className="text-xs font-bold text-emerald-900 block">
+            Item Verified &amp; Returned
+          </span>
+          <p className="text-xs text-stone-700 mt-0.5">
+            This found item has been verified and safely returned to its rightful owner. No new claims can be filed.
           </p>
         </div>
       </div>
@@ -58,7 +92,7 @@ export function ClaimActionArea({
 
         <button
           type="button"
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleClaimClick}
           className="shrink-0 px-5 py-2.5 bg-emerald-400 hover:bg-emerald-300 text-stone-900 font-semibold rounded-xl text-xs transition-all shadow-md flex items-center gap-2"
         >
           <svg className="w-4 h-4 text-stone-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">

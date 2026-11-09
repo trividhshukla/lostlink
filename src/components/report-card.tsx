@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ReportItem } from "@/lib/mock-data";
 import { Badge } from "@/components/badge";
+import { formatIncidentDate } from "@/lib/utils";
 import {
   MapPin,
   Calendar,
@@ -19,20 +20,6 @@ import {
 
 interface ReportCardProps {
   report: ReportItem;
-}
-
-function formatIncidentDate(dateString?: string): string {
-  if (!dateString) return 'Recently';
-  const parsed = new Date(dateString);
-  if (Number.isNaN(parsed.getTime())) return dateString;
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'Asia/Kolkata',
-  }).format(parsed);
 }
 
 export function ReportCard({ report }: ReportCardProps) {
@@ -194,6 +181,18 @@ export function ReportCard({ report }: ReportCardProps) {
           {isLost && report.status === "active" && (
             <span className="text-[11px] font-semibold text-amber-900 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200">
               Active Lost Listing
+            </span>
+          )}
+
+          {report.status === "claim_accepted" && (
+            <span className="text-[11px] font-semibold text-sky-900 bg-sky-50 px-2.5 py-1 rounded-md border border-sky-200">
+              In Handover
+            </span>
+          )}
+
+          {report.status === "resolved" && (
+            <span className="text-[11px] font-semibold text-stone-700 bg-stone-100 px-2.5 py-1 rounded-md border border-stone-200">
+              Resolved &bull; Returned
             </span>
           )}
         </div>

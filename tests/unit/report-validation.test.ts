@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import { CAMPUS_AREAS, CATEGORIES, REPORT_COLOURS } from '@/lib/constants';
+import { formatDate, formatIncidentDate, formatDateTime, formatTime } from '@/lib/utils';
 
 // Regex used in LostLink to block public contact info (R-UNIT-06)
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
@@ -166,5 +167,31 @@ describe('Report Validation Unit Tests (R-UNIT)', () => {
     const chatMsgWithPhone = 'Hey! Let us meet at Block B. My phone is +91 9876543210 or email me at user@uni.edu';
     const resChat = chatMessageSchema.safeParse({ body: chatMsgWithPhone });
     expect(resChat.success).toBe(true);
+  });
+
+  it('R-UNIT-08: formats incident date strictly as calendar date in IST without false 5:30 AM clock time', () => {
+    // Incident date stored as midnight UTC
+    const midnightUtc = '2026-11-03T00:00:00.000Z';
+    expect(formatDate(midnightUtc)).toBe('Nov 3, 2026');
+    expect(formatIncidentDate(midnightUtc)).toBe('Nov 3, 2026');
+
+    // Plain YYYY-MM-DD input string
+    expect(formatDate('2026-11-03')).toBe('Nov 3, 2026');
+    expect(formatIncidentDate('2026-11-03')).toBe('Nov 3, 2026');
+
+    // Empty or invalid input
+    expect(formatDate(null)).toBe('');
+    expect(formatIncidentDate(null)).toBe('Recently');
+  });
+
+  it('R-UNIT-09: formats activity timestamps accurately in IST with 12-hour clock', () => {
+    // 17:06 UTC = 22:36 IST (10:36 PM)
+    const timestampUtc = '2026-11-03T17:06:00.000Z';
+    expect(formatDateTime(timestampUtc)).toBe('Nov 3, 2026, 10:36 PM');
+    expect(formatTime(timestampUtc)).toBe('10:36 PM');
+
+    // Midnight UTC = 5:30 AM IST
+    expect(formatDateTime('2026-11-03T00:00:00.000Z')).toBe('Nov 3, 2026, 5:30 AM');
+    expect(formatTime('2026-11-03T00:00:00.000Z')).toBe('5:30 AM');
   });
 });

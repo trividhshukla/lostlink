@@ -10,6 +10,7 @@ import {
   cancelHandoverAction,
   sendMessageAction,
 } from '@/lib/server/claims/actions';
+import { formatDateTime, formatTime } from '@/lib/utils';
 
 interface ClaimChatViewProps {
   claim: ClaimWithDetails;
@@ -211,7 +212,7 @@ export function ClaimChatView({
             </div>
             <p className="text-[11px] text-stone-400">
               {claim.finder_confirmed_at
-                ? `Confirmed by finder on ${new Date(claim.finder_confirmed_at).toLocaleDateString()}`
+                ? `Confirmed by finder on ${formatDateTime(claim.finder_confirmed_at)}`
                 : 'Awaiting finder to hand over the item physically.'}
             </p>
           </div>
@@ -240,7 +241,7 @@ export function ClaimChatView({
             </div>
             <p className="text-[11px] text-stone-400">
               {claim.claimant_confirmed_at
-                ? `Confirmed by owner on ${new Date(claim.claimant_confirmed_at).toLocaleDateString()}`
+                ? `Confirmed by owner on ${formatDateTime(claim.claimant_confirmed_at)}`
                 : 'Awaiting owner to confirm safe receipt of item.'}
             </p>
           </div>
@@ -403,8 +404,8 @@ export function ClaimChatView({
                     >
                       {isMsgFinder ? 'Finder' : 'Claimant'}
                     </span>
-                    <span className="text-[10px] text-stone-400">
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <span suppressHydrationWarning className="text-[10px] text-stone-400">
+                      {formatTime(msg.created_at)}
                     </span>
                   </div>
 

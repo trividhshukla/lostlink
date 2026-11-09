@@ -69,7 +69,7 @@ export function Navbar() {
     <header className="sticky top-0 z-40 w-full border-b border-stone-800/80 bg-[#0C1512] text-stone-200 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand */}
-        <div className="flex items-center gap-4 sm:gap-6">
+        <div className="flex items-center shrink-0">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-950/80 border border-emerald-500/30 text-white font-bold tracking-tight shadow-sm group-hover:border-emerald-400/60 transition-colors">
               <span className="text-lg text-stone-100">L</span>
@@ -84,19 +84,14 @@ export function Navbar() {
               </span>
             </div>
           </Link>
-
-          <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-800/80 text-stone-300 border border-stone-700/60">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Central Campus Network
-          </span>
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1.5">
+        <nav className="hidden md:flex items-center gap-2 lg:gap-5">
           <Link
             href="/explore"
             className={cn(
-              'px-3.5 py-2 rounded-lg text-sm font-medium transition-colors',
+              'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
               pathname === '/explore'
                 ? 'bg-stone-800/90 text-white font-semibold'
                 : 'text-stone-300 hover:text-white hover:bg-stone-800/50'
@@ -106,69 +101,63 @@ export function Navbar() {
           </Link>
           <Link
             href="/#how-it-works"
-            className="px-3.5 py-2 rounded-lg text-sm font-medium text-stone-300 hover:text-white hover:bg-stone-800/50 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-stone-300 hover:text-white hover:bg-stone-800/50 transition-colors"
           >
             How It Works
           </Link>
-          {user && (
-            <>
-              <Link
-                href="/dashboard"
-                className={cn(
-                  'px-3.5 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5',
-                  pathname === '/dashboard'
-                    ? 'bg-stone-800/90 text-white font-semibold'
-                    : 'text-stone-300 hover:text-white hover:bg-stone-800/50'
-                )}
-              >
-                <LayoutDashboard className="w-3.5 h-3.5 text-emerald-400" />
-                <span>My Reports</span>
-              </Link>
-              <Link
-                href="/claims"
-                className={cn(
-                  'px-3.5 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5',
-                  pathname.startsWith('/claims')
-                    ? 'bg-stone-800/90 text-white font-semibold'
-                    : 'text-stone-300 hover:text-white hover:bg-stone-800/50'
-                )}
-              >
-                <span>Claims</span>
-              </Link>
-            </>
-          )}
+          <Link
+            href={user ? '/dashboard' : '/login?redirect=/dashboard'}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5',
+              pathname === '/dashboard'
+                ? 'bg-stone-800/90 text-white font-semibold'
+                : 'text-stone-300 hover:text-white hover:bg-stone-800/50'
+            )}
+          >
+            <LayoutDashboard className="w-3.5 h-3.5 text-emerald-400" />
+            <span>My Reports</span>
+          </Link>
+          <Link
+            href={user ? '/claims' : '/login?redirect=/claims'}
+            className={cn(
+              'px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-1.5',
+              pathname.startsWith('/claims')
+                ? 'bg-stone-800/90 text-white font-semibold'
+                : 'text-stone-300 hover:text-white hover:bg-stone-800/50'
+            )}
+          >
+            <span>Claims</span>
+          </Link>
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden md:flex items-center gap-2.5">
+        <div className="hidden md:flex items-center gap-3 lg:gap-4 shrink-0">
           <Link
-            href="/report/new?type=lost"
+            href={user ? '/report/new?type=lost' : '/login?redirect=/report/new?type=lost'}
             className="inline-flex items-center justify-center px-3.5 py-2 rounded-lg text-sm font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 transition-all shadow-xs"
           >
             I Lost Something
           </Link>
           <Link
-            href="/report/new?type=found"
+            href={user ? '/report/new?type=found' : '/login?redirect=/report/new?type=found'}
             className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-sm"
           >
             I Found Something
           </Link>
 
           {/* Notifications Indicator */}
-          {user && (
-            <Link
-              href="/notifications"
-              className="relative p-2 rounded-lg text-stone-300 hover:text-white hover:bg-stone-800/60 transition"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </Link>
-          )}
+          <Link
+            href={user ? '/notifications' : '/login?redirect=/notifications'}
+            className="relative p-2 rounded-lg text-stone-300 hover:text-white hover:bg-stone-800/60 transition"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            {user && unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </Link>
 
           {/* Auth State Button */}
           {user ? (
@@ -185,13 +174,13 @@ export function Navbar() {
             <div className="flex items-center gap-1.5 pl-1">
               <Link
                 href="/login"
-                className="px-3 py-2 rounded-lg text-xs font-semibold text-stone-300 hover:text-white hover:bg-stone-800/60 transition-colors"
+                className="px-3.5 py-2 rounded-lg text-sm font-medium text-stone-300 hover:text-white hover:bg-stone-800/50 transition-colors"
               >
                 Sign In
               </Link>
               <Link
                 href="/signup"
-                className="px-3 py-2 rounded-lg text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 transition-colors"
+                className="px-3.5 py-2 rounded-lg text-sm font-semibold bg-stone-800 hover:bg-stone-700 text-stone-100 border border-stone-700/80 transition-all shadow-xs"
               >
                 Register
               </Link>
@@ -235,40 +224,34 @@ export function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="px-3 py-2 rounded-md text-base font-medium text-white hover:bg-stone-800"
             >
-              Explore Items
+              Explore Listings
             </Link>
-            {user && (
-              <>
-                <Link
-                  href="/dashboard"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-3 py-2 rounded-md text-base font-medium text-white hover:bg-stone-800"
-                >
-                  My Reports Dashboard
-                </Link>
-                <Link
-                  href="/claims"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-3 py-2 rounded-md text-base font-medium text-white hover:bg-stone-800"
-                >
-                  Claims & Handovers
-                </Link>
-              </>
-            )}
-            {user && (
-              <Link
-                href="/notifications"
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-md text-base font-medium text-white hover:bg-stone-800 flex items-center justify-between"
-              >
-                <span>Notifications</span>
-                {unreadCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-xs font-bold">
-                    {unreadCount}
-                  </span>
-                )}
-              </Link>
-            )}
+            <Link
+              href={user ? "/dashboard" : "/login?redirect=/dashboard"}
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2 rounded-md text-base font-medium text-white hover:bg-stone-800"
+            >
+              My Reports
+            </Link>
+            <Link
+              href={user ? "/claims" : "/login?redirect=/claims"}
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2 rounded-md text-base font-medium text-white hover:bg-stone-800"
+            >
+              Claims & Handovers
+            </Link>
+            <Link
+              href={user ? "/notifications" : "/login?redirect=/notifications"}
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2 rounded-md text-base font-medium text-white hover:bg-stone-800 flex items-center justify-between"
+            >
+              <span>Notifications</span>
+              {user && unreadCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-xs font-bold">
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
             <Link
               href="/#how-it-works"
               onClick={() => setMobileMenuOpen(false)}
@@ -280,14 +263,14 @@ export function Navbar() {
 
           <div className="pt-2 border-t border-stone-800 flex flex-col gap-2">
             <Link
-              href="/report/new?type=lost"
+              href={user ? "/report/new?type=lost" : "/login?redirect=/report/new?type=lost"}
               onClick={() => setMobileMenuOpen(false)}
               className="w-full text-center px-4 py-2.5 rounded-lg text-sm font-semibold text-amber-300 bg-amber-500/15 border border-amber-500/30"
             >
               I Lost Something
             </Link>
             <Link
-              href="/report/new?type=found"
+              href={user ? "/report/new?type=found" : "/login?redirect=/report/new?type=found"}
               onClick={() => setMobileMenuOpen(false)}
               className="w-full text-center px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600"
             >
@@ -327,7 +310,7 @@ export function Navbar() {
             )}
             <div className="flex items-center gap-1">
               <Shield className="h-3.5 w-3.5 text-emerald-400" />
-              <span>Campus Network</span>
+              <span>LostLink Security</span>
             </div>
           </div>
         </div>

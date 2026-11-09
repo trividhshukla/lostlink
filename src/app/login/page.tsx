@@ -9,7 +9,7 @@ import { Compass, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get('next') || '/dashboard';
+  const next = searchParams.get('redirect') || searchParams.get('next') || '/dashboard';
   const initialError = searchParams.get('error');
 
   const [email, setEmail] = useState('');
